@@ -3,22 +3,42 @@ import { defineStore } from 'pinia'
 export const useTodoStore = defineStore('todo', {
   state: () => ({
     todos: [
-      { id: 1, text: 'Learn Vue', completed: false, priority: 'high', dueDate: '2025-07-05' },
-      { id: 2, text: 'Build a project', completed: false, priority: 'medium', dueDate: '2025-07-10' },
-      { id: 3, text: 'Master Vue', completed: false, priority: 'low', dueDate: '2025-07-15' }
+      { id: 1, text: 'Learn Vue', completed: false, priority: 'high', dueDate: '2025-07-05', category: 'Work', tags: ['learning'] },
+      { id: 2, text: 'Build a project', completed: false, priority: 'medium', dueDate: '2025-07-10', category: 'Personal', tags: ['coding'] },
+      { id: 3, text: 'Master Vue', completed: false, priority: 'low', dueDate: '2025-07-15', category: 'Work', tags: ['learning', 'important'] }
     ],
     filter: 'all',
+    categoryFilter: 'all',
+    tagFilter: 'all',
     sortBy: 'priority',
-    theme: 'light'
+    theme: 'light',
+    categories: ['Work', 'Personal', 'Shopping', 'Health'],
+    tags: ['urgent', 'important', 'learning', 'coding', 'delegated']
   }),
   
   getters: {
-    // Filter todos based on the current filter
+    // Filter todos based on all active filters
     filteredTodos: (state) => {
-      if (state.filter === 'all') return state.todos
-      if (state.filter === 'active') return state.todos.filter(todo => !todo.completed)
-      if (state.filter === 'completed') return state.todos.filter(todo => todo.completed)
-      return state.todos
+      let filtered = state.todos;
+      
+      // Filter by completion status
+      if (state.filter === 'active') {
+        filtered = filtered.filter(todo => !todo.completed);
+      } else if (state.filter === 'completed') {
+        filtered = filtered.filter(todo => todo.completed);
+      }
+      
+      // Filter by category
+      if (state.categoryFilter !== 'all') {
+        filtered = filtered.filter(todo => todo.category === state.categoryFilter);
+      }
+      
+      // Filter by tag
+      if (state.tagFilter !== 'all') {
+        filtered = filtered.filter(todo => todo.tags && todo.tags.includes(state.tagFilter));
+      }
+      
+      return filtered;
     },
     
     // Sort todos based on the current sort option
@@ -30,10 +50,22 @@ export const useTodoStore = defineStore('todo', {
             return priorityValues[b.priority] - priorityValues[a.priority]
           } else if (state.sortBy === 'dueDate') {
             return new Date(a.dueDate) - new Date(b.dueDate)
+          } else if (state.sortBy === 'category') {
+            return (a.category || '').localeCompare(b.category || '')
           }
           return 0
         })
       }
+    },
+    
+    // Get available categories
+    availableCategories: (state) => {
+      return state.categories
+    },
+    
+    // Get available tags
+    availableTags: (state) => {
+      return state.tags
     },
     
     // Get filtered and sorted todos
@@ -72,16 +104,35 @@ export const useTodoStore = defineStore('todo', {
   
   actions: {
     // Add a new todo
-    addTodo(text, priority, dueDate) {
+    addTodo(todoData) {
+      const { text, priority, dueDate, category, tags } = todoData;
       const newTodo = {
         id: Date.now(),
         text,
         completed: false,
         priority: priority || 'medium',
-        dueDate: dueDate || ''
+        dueDate: dueDate || '',
+        category: category || '',
+        tags: tags || []
       }
       this.todos.push(newTodo)
       this.saveTodos()
+    },
+    
+    // Add a new category
+    addCategory(category) {
+      if (category && !this.categories.includes(category)) {
+        this.categories.push(category);
+        this.saveTodos();
+      }
+    },
+    
+    // Add a new tag
+    addTag(tag) {
+      if (tag && !this.tags.includes(tag)) {
+        this.tags.push(tag);
+        this.saveTodos();
+      }
     },
     
     // Delete a todo
@@ -113,6 +164,16 @@ export const useTodoStore = defineStore('todo', {
       this.filter = filter
     },
     
+    // Set the category filter
+    setCategoryFilter(category) {
+      this.categoryFilter = category
+    },
+    
+    // Set the tag filter
+    setTagFilter(tag) {
+      this.tagFilter = tag
+    },
+    
     // Set the current sort option
     setSortBy(sortBy) {
       this.sortBy = sortBy
@@ -131,6 +192,17 @@ export const useTodoStore = defineStore('todo', {
         this.todos = JSON.parse(savedTodos)
       }
       
+      // Load categories and tags
+      const savedCategories = localStorage.getItem('categories')
+      if (savedCategories) {
+        this.categories = JSON.parse(savedCategories)
+      }
+      
+      const savedTags = localStorage.getItem('tags')
+      if (savedTags) {
+        this.tags = JSON.parse(savedTags)
+      }
+      
       // Load theme preference
       const savedTheme = localStorage.getItem('theme')
       if (savedTheme) {
@@ -142,6 +214,8 @@ export const useTodoStore = defineStore('todo', {
     // Save todos to localStorage
     saveTodos() {
       localStorage.setItem('todos', JSON.stringify(this.todos))
+      localStorage.setItem('categories', JSON.stringify(this.categories))
+      localStorage.setItem('tags', JSON.stringify(this.tags))
     },
     
     // Save theme preference

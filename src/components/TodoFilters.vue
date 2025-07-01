@@ -13,6 +13,46 @@
       </button>
     </div>
     
+    <div class="category-filters">
+      <span class="filter-label">Category:</span>
+      <button 
+        @click="setCategoryFilter('all')" 
+        :class="['filter-btn', { active: currentCategoryFilter === 'all' }]"
+        aria-label="Show all categories"
+      >
+        All
+      </button>
+      <button 
+        v-for="category in categories" 
+        :key="category"
+        @click="setCategoryFilter(category)" 
+        :class="['filter-btn', { active: currentCategoryFilter === category }]"
+        :aria-label="`Filter by ${category} category`"
+      >
+        {{ category }}
+      </button>
+    </div>
+    
+    <div class="tag-filters">
+      <span class="filter-label">Tag:</span>
+      <button 
+        @click="setTagFilter('all')" 
+        :class="['filter-btn', { active: currentTagFilter === 'all' }]"
+        aria-label="Show all tags"
+      >
+        All
+      </button>
+      <button 
+        v-for="tag in tags" 
+        :key="tag"
+        @click="setTagFilter(tag)" 
+        :class="['filter-btn', { active: currentTagFilter === tag }]"
+        :aria-label="`Filter by ${tag} tag`"
+      >
+        {{ tag }}
+      </button>
+    </div>
+    
     <div class="sort-options">
       <span class="sort-label">Sort by:</span>
       <button 
@@ -30,6 +70,9 @@
 </template>
 
 <script>
+import { mapState } from 'pinia'
+import { useTodoStore } from '../stores/todoStore'
+
 export default {
   name: 'TodoFilters',
   props: {
@@ -41,8 +84,21 @@ export default {
     currentSort: {
       type: String,
       required: true,
-      validator: value => ['priority', 'dueDate'].includes(value)
+      validator: value => ['priority', 'dueDate', 'category'].includes(value)
+    },
+    currentCategoryFilter: {
+      type: String,
+      required: true,
+      default: 'all'
+    },
+    currentTagFilter: {
+      type: String,
+      required: true,
+      default: 'all'
     }
+  },
+  computed: {
+    ...mapState(useTodoStore, ['categories', 'tags'])
   },
   data() {
     return {
@@ -53,13 +109,20 @@ export default {
       ],
       sortOptions: [
         { label: 'Priority', value: 'priority' },
-        { label: 'Due Date', value: 'dueDate' }
+        { label: 'Due Date', value: 'dueDate' },
+        { label: 'Category', value: 'category' }
       ]
     }
   },
   methods: {
     setFilter(filter) {
       this.$emit('update-filter', filter)
+    },
+    setCategoryFilter(category) {
+      this.$emit('update-category-filter', category)
+    },
+    setTagFilter(tag) {
+      this.$emit('update-tag-filter', tag)
     },
     setSort(sort) {
       this.$emit('update-sort', sort)
@@ -71,17 +134,23 @@ export default {
 <style scoped>
 .filters-container {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 16px;
+  margin-bottom: 20px;
 }
 
-.filters, .sort-options {
+.filters, .category-filters, .tag-filters, .sort-options {
   display: flex;
   gap: 8px;
   align-items: center;
+  flex-wrap: wrap;
+}
+
+.filter-label, .sort-label {
+  font-size: 0.9rem;
+  color: var(--secondary-text-color);
+  margin-right: 4px;
+  white-space: nowrap;
 }
 
 .filter-btn, .sort-btn {
@@ -104,26 +173,20 @@ export default {
   color: white;
 }
 
-.sort-label {
-  font-size: 0.9rem;
-  color: var(--secondary-text-color);
-  margin-right: 4px;
-}
-
 @media (max-width: 600px) {
   .filters-container {
     flex-direction: column;
     align-items: flex-start;
   }
   
-  .filters, .sort-options {
+  .filters, .category-filters, .tag-filters, .sort-options {
     width: 100%;
-    justify-content: space-between;
+    overflow-x: auto;
+    padding-bottom: 8px;
   }
   
   .filter-btn, .sort-btn {
-    flex: 1;
-    text-align: center;
+    flex-shrink: 0;
   }
 }
 </style>

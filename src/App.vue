@@ -15,8 +15,12 @@
     <TodoFilters 
       :currentFilter="filter" 
       :currentSort="sortBy"
+      :currentCategoryFilter="categoryFilter"
+      :currentTagFilter="tagFilter"
       @update-filter="updateFilter"
       @update-sort="updateSort"
+      @update-category-filter="updateCategoryFilter"
+      @update-tag-filter="updateTagFilter"
     />
     
     <TodoForm @add-todo="addTodo" />
@@ -83,7 +87,7 @@ export default {
     }
   },
   computed: {
-    ...mapState(useTodoStore, ['todos', 'filter', 'sortBy', 'theme']),
+    ...mapState(useTodoStore, ['todos', 'filter', 'categoryFilter', 'tagFilter', 'sortBy', 'theme']),
     ...mapGetters(useTodoStore, [
       'processedTodos',
       'totalTodos',
@@ -105,12 +109,20 @@ export default {
       'updateTodo',
       'toggleTodo',
       'setFilter',
+      'setCategoryFilter',
+      'setTagFilter',
       'setSortBy',
       'toggleTheme',
       'loadTodos'
     ]),
     updateFilter(filter) {
       this.setFilter(filter)
+    },
+    updateCategoryFilter(category) {
+      this.setCategoryFilter(category)
+    },
+    updateTagFilter(tag) {
+      this.setTagFilter(tag)
     },
     updateSort(sort) {
       this.setSortBy(sort)

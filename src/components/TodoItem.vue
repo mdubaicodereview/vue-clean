@@ -13,9 +13,15 @@
       />
       <div class="todo-text">
         <span :class="{ 'completed-text': todo.completed }">{{ todo.text }}</span>
-        <small v-if="todo.dueDate" class="due-date">
-          Due: {{ formatDate(todo.dueDate) }}
-        </small>
+        <div class="todo-meta">
+          <small v-if="todo.dueDate" class="due-date">
+            Due: {{ formatDate(todo.dueDate) }}
+          </small>
+          <span v-if="todo.category" class="todo-category">{{ todo.category }}</span>
+          <div v-if="todo.tags && todo.tags.length" class="todo-tags">
+            <span v-for="tag in todo.tags" :key="tag" class="todo-tag">{{ tag }}</span>
+          </div>
+        </div>
       </div>
       <div class="todo-actions">
         <button 
@@ -90,10 +96,39 @@ export default {
   color: var(--completed-text-color);
 }
 
+.todo-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+  align-items: center;
+}
+
 .due-date {
   font-size: 0.8rem;
   color: var(--secondary-text-color);
-  margin-top: 4px;
+}
+
+.todo-category {
+  font-size: 0.8rem;
+  background-color: var(--primary-color);
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+.todo-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.todo-tag {
+  font-size: 0.75rem;
+  background-color: var(--secondary-text-color);
+  color: white;
+  padding: 1px 6px;
+  border-radius: 10px;
 }
 
 .todo-actions {
@@ -149,6 +184,12 @@ export default {
   .todo-text {
     margin: 8px 0;
     width: 100%;
+  }
+  
+  .todo-meta {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
   }
   
   .todo-actions {
