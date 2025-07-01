@@ -1,27 +1,21 @@
 <template>
-  <div v-if="todo" class="modal-overlay" @click.self="cancelEdit">
-    <div class="modal-content" :class="{ 'dark-mode': isDarkMode }">
-      <h3 class="modal-title">Edit Todo</h3>
+  <div v-if="isOpen" class="modal-overlay" @click.self="closeModal">
+    <div class="modal-content" role="dialog" aria-labelledby="modal-title">
+      <h2 id="modal-title" class="modal-title">Edit Todo</h2>
       
       <div class="form-group">
         <label for="edit-text">Task</label>
         <input 
-          id="edit-text"
-          type="text" 
-          v-model="editedText" 
-          class="form-control"
-          aria-label="Edit todo text"
+          id="edit-text" 
+          v-model="editedTodo.text" 
+          class="form-input"
+          placeholder="Task description"
         />
       </div>
       
       <div class="form-group">
         <label for="edit-priority">Priority</label>
-        <select 
-          id="edit-priority"
-          v-model="editedPriority" 
-          class="form-control"
-          aria-label="Edit priority"
-        >
+        <select id="edit-priority" v-model="editedTodo.priority" class="form-select">
           <option value="low">Low</option>
           <option value="medium">Medium</option>
           <option value="high">High</option>
@@ -29,80 +23,121 @@
       </div>
       
       <div class="form-group">
-        <label for="edit-date">Due Date</label>
+        <label for="edit-category">Category</label>
+        <select id="edit-category" v-model="editedTodo.category" class="form-select">
+          <option value="">No Category</option>
+          <option v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label for="edit-tag">Tags</label>
+        <div class="tag-selection">
+          <select 
+            id="edit-tag" 
+            v-model="selectedTag" 
+            class="form-select"
+            @change="addTagToSelection"
+          >
+            <option value="">Add Tag</option>
+            <option v-for="tag in availableTags" :key="tag" :value="tag">{{ tag }}</option>
+          </select>
+          
+          <div v-if="editedTodo.tags && editedTodo.tags.length" class="selected-tags">
+            <span v-for="tag in editedTodo.tags" :key="tag" class="tag-pill">
+              {{ tag }}
+              <button @click="removeTag(tag)" class="remove-tag" aria-label="Remove tag">×</button>
+            </span>
+          </div>
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label for="edit-due-date">Due Date</label>
         <input 
-          id="edit-date"
+          id="edit-due-date" 
           type="date" 
-          v-model="editedDueDate" 
-          class="form-control"
-          aria-label="Edit due date"
+          v-model="editedTodo.dueDate" 
+          class="form-input"
         />
       </div>
       
       <div class="modal-actions">
-        <button 
-          @click="saveEdit"
-          class="save-btn"
-          :disabled="!editedText.trim()"
-        >
-          Save
-        </button>
-        <button 
-          @click="cancelEdit"
-          class="cancel-btn"
-        >
-          Cancel
-        </button>
+        <button @click="closeModal" class="cancel-btn">Cancel</button>
+        <button @click="saveTodo" class="save-btn" :disabled="!editedTodo.text.trim()">Save</button>
       </div>
     </div>
   </div>
 </template>
 
 <script>
+import { mapState } from 'pinia'
+import { useTodoStore } from '../stores/todoStore'
+
 export default {
   name: 'TodoEditModal',
   props: {
+    isOpen: {
+      type: Boolean,
+      required: true
+    },
     todo: {
       type: Object,
-      default: null
-    },
-    isDarkMode: {
-      type: Boolean,
-      default: false
+      required: true
     }
   },
   data() {
     return {
-      editedText: '',
-      editedPriority: 'medium',
-      editedDueDate: ''
+      editedTodo: {
+        id: null,
+        text: '',
+        completed: false,
+        priority: 'medium',
+        category: '',
+        tags: [],
+        dueDate: ''
+      },
+      selectedTag: ''
+    }
+  },
+  computed: {
+    ...mapState(useTodoStore, ['categories', 'tags']),
+    availableTags() {
+      return this.tags.filter(tag => !this.editedTodo.tags || !this.editedTodo.tags.includes(tag))
     }
   },
   watch: {
-    todo: {
-      immediate: true,
-      handler(newTodo) {
-        if (newTodo) {
-          this.editedText = newTodo.text
-          this.editedPriority = newTodo.priority
-          this.editedDueDate = newTodo.dueDate
+    isOpen(newVal) {
+      if (newVal) {
+        this.editedTodo = { 
+          ...this.todo,
+          tags: this.todo.tags ? [...this.todo.tags] : []
         }
+        this.selectedTag = ''
       }
     }
   },
   methods: {
-    saveEdit() {
-      if (!this.editedText.trim()) return
-      
-      this.$emit('save', {
-        id: this.todo.id,
-        text: this.editedText.trim(),
-        priority: this.editedPriority,
-        dueDate: this.editedDueDate
-      })
+    saveTodo() {
+      if (this.editedTodo.text.trim()) {
+        this.$emit('save', { ...this.editedTodo })
+        this.closeModal()
+      }
     },
-    cancelEdit() {
-      this.$emit('cancel')
+    closeModal() {
+      this.$emit('close')
+    },
+    addTagToSelection() {
+      if (this.selectedTag && (!this.editedTodo.tags || !this.editedTodo.tags.includes(this.selectedTag))) {
+        if (!this.editedTodo.tags) {
+          this.editedTodo.tags = []
+        }
+        this.editedTodo.tags.push(this.selectedTag)
+        this.selectedTag = ''
+      }
+    },
+    removeTag(tag) {
+      this.editedTodo.tags = this.editedTodo.tags.filter(t => t !== tag)
     }
   }
 }
@@ -113,29 +148,31 @@ export default {
   position: fixed;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
+  right: 0;
+  bottom: 0;
   background-color: rgba(0, 0, 0, 0.5);
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000;
+  z-index: 100;
 }
 
 .modal-content {
   background-color: var(--modal-bg-color);
-  border-radius: 8px;
   padding: 24px;
+  border-radius: 8px;
   width: 90%;
-  max-width: 400px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  max-width: 500px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  max-height: 90vh;
+  overflow-y: auto;
 }
 
 .modal-title {
   margin-top: 0;
   margin-bottom: 20px;
   color: var(--text-color);
-  font-size: 1.2rem;
+  font-size: 1.5rem;
 }
 
 .form-group {
@@ -145,18 +182,53 @@ export default {
 .form-group label {
   display: block;
   margin-bottom: 6px;
-  font-size: 0.9rem;
-  color: var(--secondary-text-color);
+  font-weight: 500;
+  color: var(--text-color);
 }
 
-.form-control {
+.form-input,
+.form-select {
   width: 100%;
   padding: 10px;
   border: 1px solid var(--border-color);
   border-radius: 4px;
-  font-size: 1rem;
   background-color: var(--input-bg-color);
   color: var(--text-color);
+  font-size: 1rem;
+}
+
+.tag-selection {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.selected-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.tag-pill {
+  display: inline-flex;
+  align-items: center;
+  background-color: var(--primary-color);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 16px;
+  font-size: 0.8rem;
+}
+
+.remove-tag {
+  background: none;
+  border: none;
+  color: white;
+  margin-left: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 0.8;
+  padding: 0 4px;
 }
 
 .modal-actions {
@@ -166,32 +238,24 @@ export default {
   margin-top: 24px;
 }
 
-.save-btn, .cancel-btn {
+.cancel-btn,
+.save-btn {
   padding: 8px 16px;
   border: none;
   border-radius: 4px;
+  font-size: 1rem;
   cursor: pointer;
-  font-size: 0.9rem;
   transition: background-color 0.2s;
-}
-
-.save-btn {
-  background-color: var(--primary-color);
-  color: white;
-}
-
-.save-btn:hover:not(:disabled) {
-  background-color: var(--primary-color-hover);
-}
-
-.save-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
 }
 
 .cancel-btn {
   background-color: var(--cancel-btn-bg);
   color: var(--cancel-btn-text);
+}
+
+.save-btn {
+  background-color: var(--primary-color);
+  color: white;
 }
 
 .cancel-btn:hover {
